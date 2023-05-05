@@ -1,0 +1,191 @@
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['store', 'plugin', 'plugin_list'] %}
+
+{% block title %}ProductShortCode{% endblock %}
+{% block sub_title %}プラグイン一覧{% endblock %}
+
+{% form_theme form '@admin/Form/bootstrap_4_horizontal_layout.html.twig' %}
+
+{% block stylesheet %}
+<style>
+#product_loop .select-flex{
+    display: flex;
+    justify-content: space-between;
+}
+#product_loop .select-flex > div:nth-child(1){
+    width: calc(100% - 60px);
+}
+#product_loop .select-flex > div:nth-child(2){
+    width: 51px;
+}
+</style>
+{% endblock stylesheet %}
+
+{% block javascript %}
+<script src="//code.jquery.com/ui/1.13.1/jquery-ui.min.js"></script>
+<script>
+$(function(){
+const newLineTmp = $("#newLineTmp").html();
+//let current_tr;
+$("#add_product").on("click", function () {
+    let newCreate = $("#product_loop");
+    $(newLineTmp).appendTo(newCreate); 
+    row_count_reset();
+});
+
+
+$("#product_loop").sortable({});
+$("#product_loop").on('sortstop',function(){
+    row_count_reset();
+});
+
+$(document).on("click", ".btn-line-delete", function () {
+    let current_row = $(this).parents(".row");
+    let current_id = current_row.find(".col-title").data("id");
+    console.log(current_id);
+    if(confirm('本当に削除しますか？')){
+        if(current_id === ""  || current_id === undefined){
+            current_row.remove();
+            row_count_reset();
+        }else{
+            $.ajax({
+                url:'{{ url('admin_homepage') }}product_short_code/option/'+ current_id +'/delete/',
+                type: 'get',
+                success: function(result) {
+                  // 削除が成功した場合の処理
+                  current_row.remove();
+                  row_count_reset();
+                },
+                error: function(xhr, status, error) {
+                  // 削除が失敗した場合の処理
+                  alert("エラー：" + error);
+                }
+            });
+        }
+    }
+});
+
+function row_count_reset() {
+    $("#product_loop .row").each(function (i) {
+      $(this).find(".col-title").text("商品項目" + (i + 1));
+      $(this).find('input,select').each(function(){
+        // 置換対象の文字列
+        var input_name = $(this).attr("name");
+        var result = input_name.replace(/(.*\[)(\d+)(\].*)/, "$1" + i + "$3" );
+        $(this).attr({"name":result});
+        });
+      $(this).find(".sort-number").val(i + 1);
+    });
+}
+});
+
+
+</script>
+{% endblock javascript %}
+
+{% block main %}
+
+    <form role="form" method="post">
+        {{ form_widget(form._token) }}
+        <div class="c-contentsArea__cols">
+            <div class="c-contentsArea__primaryCol">
+                <div class="c-primaryCol">
+                    <div class="card rounded border-0 mb-4">
+                        <div class="card-header"><span>設定</span></div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-3"><span>名前</span> <span class="badge bg-primary ml-1">必須</span></div>
+                                <div class="col mb-2">
+                                    {{ form_widget(form.name) }}
+                                    {{ form_errors(form.name) }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-3"><span>コンテンツ</span></div>
+                                <div class="col mb-2">
+                                    {{ form_widget(form.content) }}
+                                    {{ form_errors(form.content) }}
+                                </div>
+                            </div>
+
+
+                            <div id="product_loop">
+                                {% for index, optionForm in form.Options %}
+                                <div class="row">
+                                    <div class="col-3 col-title" data-id="{{optionForm.vars.data.id}}"><span>商品項目{{ index + 1 }}</span></div>
+                                    <div class="col mb-2">
+                                        <div class="form-group mb-1">
+                                            {{ form_widget(optionForm.sort_no, {attr : {class : 'sort-number'}}) }}
+                                            {{ form_errors(optionForm.sort_no) }}
+                                            <div class="select-flex">
+                                                <div>
+                                                    {{ form_widget(optionForm.Product) }}
+                                                    {{ form_errors(optionForm.Product) }}
+                                                </div>
+                                                <div>
+                                                    <button type="button" class="btn btn-danger btn-line-delete">削除</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button type="button" class="btn btn-primary" id="add_product">製品を追加する</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="c-conversionArea">
+            <div class="c-conversionArea__container">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-6">
+                        <div class="c-conversionArea__leftBlockItem">
+                            <a class="c-baseLink"
+                               href="{{ url('admin_store_plugin') }}">
+                                <i class="fa fa-backward" aria-hidden="true"></i>
+                                <span>プラグイン一覧</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="row align-items-center justify-content-end">
+                            <div class="col-auto">
+                                <button class="btn btn-ec-conversion px-5" type="submit">登録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+
+
+    <template id="newLineTmp">
+        <div class="row">
+            <div class="col-3 col-title" data-id=""><span>商品項目</span></div>
+            <div class="col mb-2">
+                <div class="form-group mb-1">
+                    <input type="hidden" name="config[Options][0][sort_no]" value="1" class="sort-number">
+                    <div class="select-flex">
+                        <div>
+                            <select name="config[Options][0][Product]" class="form-select">
+                                {% if product_datas is not empty %}
+                                {% for product_data in product_datas %}
+                                <option value="{{product_data.id}}">{{product_data.name}}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-danger btn-line-delete">削除</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>    
+    </template>
+{% endblock %}
